@@ -73,29 +73,31 @@
 
 ;; (: dct (Bytes -> FlVector))
 (define (dct bytes)
-  (let ([out (make-flvector tile-size)])
-    (for ([basis (in-vector basis-matrices)]
-          [n (in-naturals)])
-      (flvector-set! out
-                     n
-                     (fl/
-                      (for/fold ([sum 0.0])
-                          ([i (in-range tile-size)]
-                           [b (in-bytes bytes)])
-                        (fl+ sum
-                             (fl* (fx->fl b)
-                                  (flvector-ref basis i))))
-                      (fx->fl tile-size))))
-    (for* ([i (in-range tile-length)]
-           [j (in-range tile-length)])
-          (flvector-set! out
-                         (fx+ (fx* i tile-length) j)
-                         (fl* (flvector-ref out (fx+ (fx* i tile-length) j))
-                              (cond
-                               [(and (fx= i 0) (fx= j 0)) 1.0]
-                               [(or (fx= i 0) (fx= j 0)) 2.0]
-                               [else 4.0]))))
-    out))
+  (define accum (make-flvector tile-size 0.0))
+  (define out (make-flvector tile-size))
+  (for ([i (in-range tile-size)])
+       (flvector-set! accum i (fx->fl (bytes-ref bytes i))))
+  (for ([basis (in-vector basis-matrices)]
+        [n (in-naturals)])
+       (flvector-set! out
+                      n
+                      (fl/
+                       (for/fold ([sum 0.0])
+                           ([i (in-range tile-size)])
+                         (fl+ sum
+                              (fl* (flvector-ref accum i)
+                                   (flvector-ref basis i))))
+                       (fx->fl tile-size))))
+  (for* ([i (in-range tile-length)]
+         [j (in-range tile-length)])
+        (flvector-set! out
+                       (fx+ (fx* i tile-length) j)
+                       (fl* (flvector-ref out (fx+ (fx* i tile-length) j))
+                            (cond
+                             [(and (fx= i 0) (fx= j 0)) 1.0]
+                             [(or (fx= i 0) (fx= j 0)) 2.0]
+                             [else 4.0]))))
+  out)
 
 ;; (: idct (FlVector -> Bytes))
 (define (idct flvector)
