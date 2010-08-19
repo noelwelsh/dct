@@ -1,0 +1,7 @@
+*~
+compiled
+.DS*
+*.o
+*.so
+.nfs*
+
